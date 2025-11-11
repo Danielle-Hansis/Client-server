@@ -5,13 +5,19 @@ import sys
 import struct
 
 
+''' constants '''
+DEFAULT_PORT = 1337
+BACKLOG = 5  # 5 is reasonable as a backlog, since the whole point is not to be blocking
+
+
 def main():
     users_file_path, port = parse_args(sys.argv)
     cred_dict = create_user_dict(users_file_path)
-
-
-''' constants '''
-DEFAULT_PORT = 1337
+    # TODO- take this part out of main? make a loop
+    server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)  # IPv4,TCP
+    server_socket.bind(('', port))
+    server_socket.listen(BACKLOG)
+    '''we now have a listening socket'''
 
 
 '''argument setup'''
