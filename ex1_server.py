@@ -18,6 +18,24 @@ def main():
     server_socket.bind(('', port))
     server_socket.listen(BACKLOG)
     '''we now have a listening socket'''
+    server_workflow(server_socket, cred_dict)
+
+
+def server_workflow(server_socket: socket, cred_dict: dict):
+    clients = set()  # holds unique connections
+    while True:
+        #  build the rlist dynamically every loop from the sockets that currently exist:
+        rlist = [server_socket] + list(clients)
+        try:
+            readable, _, _ = select.select(rlist, [], [])
+        except select.error as e:
+            print("select failed")
+            return
+        for soc in readable:
+            if soc is server_socket:  # the listening socket is ready to handle a new client
+                pass  # TODO: new client handling
+            else:  # a client has data to pass/ a client closed
+                pass  # TODO: data from client handling
 
 
 '''argument setup'''
