@@ -8,12 +8,12 @@ import struct
 ''' constants '''
 DEFAULT_PORT = 1337
 BACKLOG = 5  # 5 is reasonable as a backlog, since the whole point is not to be blocking
+CLIENTS = set()  # holds unique connections
 
 
 def main():
     users_file_path, port = parse_args(sys.argv)
     cred_dict = create_user_dict(users_file_path)
-    # TODO- take this part out of main? make a loop
     server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)  # IPv4,TCP
     server_socket.bind(('', port))
     server_socket.listen(BACKLOG)
@@ -22,28 +22,48 @@ def main():
 
 
 def server_workflow(server_socket: socket, cred_dict: dict):
-    clients = set()  # holds unique connections
     while True:
         #  build the rlist dynamically every loop from the sockets that currently exist:
-        rlist = [server_socket] + list(clients)
+        rlist = [server_socket] + list(CLIENTS)  # sockets to be monitored
         try:
-            readable, _, _ = select.select(rlist, [], [])
+            readable, _, _ = select.select(rlist, [], [])  # sockets ready for accept()/recv()
         except select.error as e:
             print("select failed")
-            return
+            break
         for soc in readable:
             if soc is server_socket:  # the listening socket is ready to handle a new client
-                pass  # TODO: new client handling
+                handle_new_client(server_socket)
             else:  # a client has data to pass/ a client closed
-                pass  # TODO: data from client handling
+                if not handle_data_from_client(soc, cred_dict):
+                    CLIENTS.discard(soc)
+                    soc.close()
+
+
+
+def handle_data_from_client(client: socket, cred_dict: dict) -> bool:
+    #TODO this
+    try:
+# TODO get info (recv)
+    except OSError:
+        return False
+    return True
+
+def handle_new_client(server_socket: socket):
+    try:
+        client, address = server_socket.accept()
+    except OSError:
+        print("an error has occurred")
+        return
+    CLIENTS.add(client)
+    client.sendall(b"Welcome! Please log in.")  # TODO: maybe create a sendall implementation
+    return
+
 
 
 '''argument setup'''
 # the server gets started by ./ex1_server.py users_file [port]
 # file_users: path to a text file with tab separated user   &passwords
 # port: not mandatory, default is 1337
-
-
 def parse_args(args: list):
     if len(sys.argv) < 2 or len(sys.argv) > 3:
         print("the format is: ./ex1_server.py users_file [port]")
