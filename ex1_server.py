@@ -3,7 +3,7 @@ import socket
 import select
 import sys
 import struct
-
+import funcs
 
 ''' constants '''
 DEFAULT_PORT = 1337
@@ -102,4 +102,20 @@ def create_user_dict(users_file_path: str):
 
 
 
+
+
+'''supported commands'''
+
+def handle_command(client: socket.socket, command: str) -> bool:
+    if command == "quit":
+        return False
+
+    if command.startswith("parentheses"):
+        if ":" in command:
+            seq = command.split(":", 1)[1].strip()
+        else:
+            seq = ""
+        ok = funcs.balanced_parentheses(seq)
+        client.sendall(f"the parentheses are balanced: {'yes' if ok else 'no'}\n".encode())
+        return True
 
