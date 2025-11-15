@@ -9,6 +9,10 @@ import funcs
 DEFAULT_PORT = 1337
 BACKLOG = 5  # 5 is reasonable as a backlog, since the whole point is not to be blocking
 CLIENTS = set()  # holds unique connections
+SOCKET_BUFFERS = {}     # NEW - dict to save commands until we're done with processing
+CLIENT_STATE = {}       # NEW - dict to save client state; pre or post login
+
+
 
 
 def main():
@@ -17,8 +21,11 @@ def main():
     server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)  # IPv4,TCP
     server_socket.bind(('', port))
     server_socket.listen(BACKLOG)
-    '''we now have a listening socket'''
-    server_workflow(server_socket, cred_dict)
+    # NEW - Try and Finally
+    try:
+        server_workflow(server_socket, cred_dict)
+    finally:
+        server_socket.close()
 
 
 def server_workflow(server_socket: socket, cred_dict: dict):
@@ -41,11 +48,28 @@ def server_workflow(server_socket: socket, cred_dict: dict):
 
 
 def handle_data_from_client(client: socket, cred_dict: dict) -> bool:
-    #TODO this
     try:
-# TODO get info (recv)
+        data = client.recv(4096)        # 4KB is convention - in tirgul he did 1024
+    except ConnectionResetError:        # Connection died without FIN
+        return False
     except OSError:
         return False
+    if not data:        # Client closed
+        return False
+    if client not in SOCKET_BUFFERS:        # Init buffer if needed     NEW FROM HERE
+        SOCKET_BUFFERS[client] = b""
+    SOCKET_BUFFERS[client] += data          # Append data to buffer
+
+    if client not in CLIENT_STATE:
+        CLIENT_STATE[client] = {"stage": "awaiting_user","username": None}
+
+    while b"\n" in SOCKET_BUFFERS[client]:  # As long as we have a full line - process it
+        line, rest = SOCKET_BUFFERS[client].split(b"\n", 1)     # Split once
+        SOCKET_BUFFERS[client] = rest
+        line = line.rstrip(b"\r")
+        text_line = line.decode("utf-8")
+        if not handle_command(client, text_line, cred_dict):       # NEW
+            return False
     return True
 
 def handle_new_client(server_socket: socket):
@@ -105,8 +129,13 @@ def create_user_dict(users_file_path: str):
 
 
 '''supported commands'''
+def handle_command(client: socket.socket, command: str, cred_dict:dict) -> bool:        # NEW
+    state = CLIENT_STATE[client]
 
-def handle_command(client: socket.socket, command: str) -> bool:
+    if state["stage"] != "logged_in":       # Need to handle log in first - NEW, I added this + the func in funcs
+        return funcs.handle_login(client, command, cred_dict, state)
+
+    # NOW - User is logged in
     if command == "quit":
         return False
 
@@ -118,4 +147,5 @@ def handle_command(client: socket.socket, command: str) -> bool:
         ok = funcs.balanced_parentheses(seq)
         client.sendall(f"the parentheses are balanced: {'yes' if ok else 'no'}\n".encode())
         return True
+    # TODO: Add all the other funny functions <3
 
