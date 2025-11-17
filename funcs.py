@@ -3,7 +3,7 @@ import socket
 
 '''commands implementation'''
 
-def handle_login(client: socket.socket, line: str, cred_dict: dict, state: dict) -> bool:
+def handle_login(client: socket.socket, line: str, cred_dict: dict, state: dict) -> bool:       # TODO: Make sure we disconnect (return false) when need to, because I was very confused about this whole thing
     line = line.strip()     # Get rid of everything
     if state.get("stage") is None:
         state["stage"] = "awaiting_user"
@@ -14,7 +14,8 @@ def handle_login(client: socket.socket, line: str, cred_dict: dict, state: dict)
             username = line[len("User:"):].strip()
             state["username"] = username
             state["stage"] = "awaiting_password"
-        return True
+            return True
+        return False        # disconnect when you write nonesense - TODO: to danielle, did I understand the instructionsright? We need to disconnect if user gets it wrong???
 
     if state["stage"] == "awaiting_password":
         if line.startswith("Password:"):
@@ -29,9 +30,10 @@ def handle_login(client: socket.socket, line: str, cred_dict: dict, state: dict)
                 client.sendall(b"Failed to login.\n")
                 state["stage"] = "awaiting_user"        # Reset to allow another attempt
                 state["username"] = None
-        return True
+            return True            # TODO: SAME HERE, I am confuseddddd
+        return False
 
-    return True
+    return False        # Safety
 
 def balanced_parentheses(seq: str):
     counter = 0

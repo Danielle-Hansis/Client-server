@@ -2,7 +2,6 @@
 import socket
 import select
 import sys
-import struct           # Do wee need this? Never used I think
 import funcs
 
 ''' constants '''
