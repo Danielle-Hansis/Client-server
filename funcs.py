@@ -1,4 +1,5 @@
 import math
+import socket
 
 '''commands implementation'''
 
@@ -50,3 +51,18 @@ def calc_lcm(x: int, y: int) -> int:
     if x == 0 or y == 0:
         return abs(x or y)
     return abs(x // math.gcd(x, y) * y)
+
+def caesar_code(plaintext: str, x: int) -> str:
+    y = []
+    plaintext = plaintext.lower()
+    for character in plaintext:
+        if not ('a' <= character <= 'z' or character == ' '):     # Invalid input
+            return None
+        if 'a' <= character <= 'z':
+            y.append(chr((ord(character) - ord('a') + x) % 26 + ord('a')))
+        else:
+            y.append(character)
+    return ''.join(y)
+
+
+
