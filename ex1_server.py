@@ -145,6 +145,13 @@ def handle_command(client: socket.socket, command: str, cred_dict:dict) -> bool:
             seq = command.split(":", 1)[1].strip()
         else:
             seq = ""
+
+        # Check that only parentheses in text
+        for ch in seq:
+            if ch not in ("(", ")"):
+                client.sendall(b"error: invalid input\n")
+                return False  # Server will disconnect client
+
         ok = funcs.balanced_parentheses(seq)
         client.sendall(f"the parentheses are balanced: {'yes' if ok else 'no'}\n".encode())
         return True
@@ -152,47 +159,48 @@ def handle_command(client: socket.socket, command: str, cred_dict:dict) -> bool:
     if command.startswith("lcm"):
         if ":" not in command:
             client.sendall(b"error: invalid input\n")
-            return True
+            return False
         after_colon = command.split(":", 1)[1].strip()
         parts = after_colon.split()
         if len(parts) != 2:
             client.sendall(b"error: invalid input\n")
-            return True
+            return False
         x_str, y_str = parts
         try:
             x = int(x_str)
             y = int(y_str)
         except ValueError:
             client.sendall(b"error: invalid input\n")
-            return True
+            return False
         result = funcs.calc_lcm(x, y)
-        if result is None:
-            client.sendall(b"error: invalid input\n")
-            return True
         client.sendall(f"the lcm is: {result}\n".encode())
         return True
 
     if command.startswith("caesar"):        # NEW
         if ":" not in command:
             client.sendall(b"error: invalid input\n")
-            return True
+            return False
         after_colon = command.split(":", 1)[1].strip()      # Get rid of "caesar"
         parts = after_colon.rsplit(" ", 1)                  # Split X and plaintext
         if len(parts) != 2:
             client.sendall(b"error: invalid input\n")
-            return True
+            return False
         plaintext, shift_str = parts[0], parts[1]
         try:
             shift = int(shift_str)      # Do we need to check this?
         except ValueError:
             client.sendall(b"error: invalid input\n")
-            return True
+            return False
         result = funcs.caesar_code(plaintext, shift)
         if result is None:
             client.sendall(b"error: invalid input\n")
-            return True
+            return False
         client.sendall(f"the ciphertext is: {result}\n".encode())
         return True
+    else:       # Unknown command
+        client.sendall(b"error: invalid input\n")
+        return False
+
 
 
 if __name__ == "__main__":

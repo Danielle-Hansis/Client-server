@@ -15,6 +15,7 @@ def handle_login(client: socket.socket, line: str, cred_dict: dict, state: dict)
             state["username"] = username
             state["stage"] = "awaiting_password"
             return True
+        client.sendall(b"error: invalid input\n")
         return False        # disconnect when you write nonesense - TODO: to danielle, did I understand the instructionsright? We need to disconnect if user gets it wrong???
 
     if state["stage"] == "awaiting_password":
@@ -31,8 +32,9 @@ def handle_login(client: socket.socket, line: str, cred_dict: dict, state: dict)
                 state["stage"] = "awaiting_user"        # Reset to allow another attempt
                 state["username"] = None
             return True            # TODO: SAME HERE, I am confuseddddd
+        client.sendall(b"error: invalid input\n")
         return False
-
+    client.sendall(b"error: invalid input\n")
     return False        # Safety
 
 def balanced_parentheses(seq: str):
@@ -48,11 +50,13 @@ def balanced_parentheses(seq: str):
 
 
 def calc_lcm(x: int, y: int) -> int:
-    if x == 0 and y == 0:
-        return None  # signal invalid input
+    x = abs(x)
+    y = abs(y)
+
     if x == 0 or y == 0:
-        return abs(x or y)
-    return abs(x // math.gcd(x, y) * y)
+        return 0
+
+    return (x * y) // math.gcd(x, y)
 
 def caesar_code(plaintext: str, x: int) -> str:
     y = []
