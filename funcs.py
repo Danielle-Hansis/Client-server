@@ -1,10 +1,10 @@
 import math
 import socket
 
-'''commands implementation'''
+'''Commands Implementation'''
 
-def handle_login(client: socket.socket, line: str, cred_dict: dict, state: dict) -> bool:       # TODO: Make sure we disconnect (return false) when need to, because I was very confused about this whole thing
-    line = line.strip()     # Get rid of everything
+def handle_login(client: socket.socket, line: str, cred_dict: dict, state: dict) -> bool:
+    line = line.strip()
     if state.get("stage") is None:
         state["stage"] = "awaiting_user"
         state["username"] = None
@@ -16,7 +16,7 @@ def handle_login(client: socket.socket, line: str, cred_dict: dict, state: dict)
             state["stage"] = "awaiting_password"
             return True
         client.sendall(b"error: invalid input\n")
-        return False        # disconnect when you write nonesense - TODO: to danielle, did I understand the instructionsright? We need to disconnect if user gets it wrong???
+        return False        # disconnect when you write nonesense
 
     if state["stage"] == "awaiting_password":
         if line.startswith("Password:"):
@@ -31,11 +31,12 @@ def handle_login(client: socket.socket, line: str, cred_dict: dict, state: dict)
                 client.sendall(b"Failed to login.\n")
                 state["stage"] = "awaiting_user"        # Reset to allow another attempt
                 state["username"] = None
-            return True            # TODO: SAME HERE, I am confuseddddd
+            return True
         client.sendall(b"error: invalid input\n")
         return False
     client.sendall(b"error: invalid input\n")
-    return False        # Safety
+    return False
+
 
 def balanced_parentheses(seq: str):
     counter = 0
@@ -58,6 +59,7 @@ def calc_lcm(x: int, y: int) -> int:
 
     return (x * y) // math.gcd(x, y)
 
+
 def caesar_code(plaintext: str, x: int) -> str:
     y = []
     plaintext = plaintext.lower()
@@ -69,6 +71,3 @@ def caesar_code(plaintext: str, x: int) -> str:
         else:
             y.append(character)
     return ''.join(y)
-
-
-

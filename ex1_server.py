@@ -4,13 +4,12 @@ import select
 import sys
 import funcs
 
-''' constants '''
+''' GLOBAL VARS '''
 DEFAULT_PORT = 1337
-BACKLOG = 5  # 5 is reasonable as a backlog, since the whole point is not to be blocking
-CLIENTS = set()  # holds unique connections
-SOCKET_BUFFERS = {}     # NEW - dict to save commands until we're done with processing
-CLIENT_STATE = {}       # NEW - dict to save client state; pre or post login
-
+BACKLOG = 5
+CLIENTS = set()
+SOCKET_BUFFERS = {}
+CLIENT_STATE = {}
 
 
 
@@ -29,66 +28,60 @@ def main():
 
 def server_workflow(server_socket: socket, cred_dict: dict):
     while True:
-        #  build the rlist dynamically every loop from the sockets that currently exist:
         rlist = [server_socket] + list(CLIENTS)  # sockets to be monitored
         try:
             readable, _, _ = select.select(rlist, [], [])  # sockets ready for accept()/recv()
-        except select.error as e:
+        except select.error:
             print("select failed")
             break
         for soc in readable:
             if soc is server_socket:  # the listening socket is ready to handle a new client
                 handle_new_client(server_socket)
-            else:  # a client has data to pass/ a client closed
+            else:  # client has data to pass / client closed
                 if not handle_data_from_client(soc, cred_dict):
                     CLIENTS.discard(soc)
                     soc.close()
 
 
-
 def handle_data_from_client(client: socket, cred_dict: dict) -> bool:
     try:
-        data = client.recv(4096)        # 4KB is convention - in tirgul he did 1024
+        data = client.recv(4096)
     except ConnectionResetError:        # Connection died without FIN
         return False
     except OSError:
         return False
     if not data:        # Client closed
         return False
-    if client not in SOCKET_BUFFERS:        # Init buffer if needed     NEW FROM HERE
+    if client not in SOCKET_BUFFERS:        # Init buffer if needed
         SOCKET_BUFFERS[client] = b""
-    SOCKET_BUFFERS[client] += data          # Append data to buffer
+    SOCKET_BUFFERS[client] += data
 
     if client not in CLIENT_STATE:
         CLIENT_STATE[client] = {"stage": "awaiting_user","username": None}
 
-    while b"\n" in SOCKET_BUFFERS[client]:  # As long as we have a full line - process it
-        line, rest = SOCKET_BUFFERS[client].split(b"\n", 1)     # Split once
+    while b"\n" in SOCKET_BUFFERS[client]:
+        line, rest = SOCKET_BUFFERS[client].split(b"\n", 1)
         SOCKET_BUFFERS[client] = rest
         line = line.rstrip(b"\r")
         text_line = line.decode("utf-8")
-        if not handle_command(client, text_line, cred_dict):       # NEW
+        if not handle_command(client, text_line, cred_dict):
             SOCKET_BUFFERS.pop(client, None)
             CLIENT_STATE.pop(client, None)
             return False
     return True
 
+
 def handle_new_client(server_socket: socket):
     try:
         client, address = server_socket.accept()
     except OSError:
-        print("an error has occurred")
+        print("An error has occurred")
         return
     CLIENTS.add(client)
-    client.sendall(b"Welcome! Please log in.\n")  # TODO: maybe create a sendall implementation
+    client.sendall(b"Welcome! Please log in.\n")
     return
 
 
-
-'''argument setup'''
-# the server gets started by ./ex1_server.py users_file [port]
-# file_users: path to a text file with tab separated user   &passwords
-# port: not mandatory, default is 1337
 def parse_args(args: list):
     if len(sys.argv) < 2 or len(sys.argv) > 3:
         print("the format is: ./ex1_server.py users_file [port]")
@@ -115,28 +108,25 @@ def create_user_dict(users_file_path: str):
 
     with users_file:
         for line in users_file:
-            line = line.strip()  # gets rid of '\n'
-            user_password = line.split('\t')  # gets rid of tab, becomes ['user','pass'] hopefully
+            line = line.strip()
+            user_password = line.split('\t')
             if len(user_password) == 2:
                 cred_dict[user_password[0]] = user_password[1]
             else:
-                print("entries should be: user  password")
+                print("Entries should be: user  password")
     if len(cred_dict) == 0:
-        print("WARNING: no users found")
+        print("WARNING: No users found")
     return cred_dict
 
 
-
-
-
-'''supported commands'''
-def handle_command(client: socket.socket, command: str, cred_dict:dict) -> bool:        # NEW
+def handle_command(client: socket.socket, command: str, cred_dict:dict) -> bool:
     state = CLIENT_STATE[client]
 
-    if state["stage"] != "logged_in":       # Need to handle log in first - NEW, I added this + the func in funcs
+    # Client hasn't logged in yet - need to handle log in first
+    if state["stage"] != "logged_in":
         return funcs.handle_login(client, command, cred_dict, state)
 
-    # NOW - User is logged in
+    # User is already logged in
     if command == "quit":
         return False
 
@@ -146,11 +136,11 @@ def handle_command(client: socket.socket, command: str, cred_dict:dict) -> bool:
         else:
             seq = ""
 
-        # Check that only parentheses in text
+        # Check that only parentheses in client's input text
         for ch in seq:
             if ch not in ("(", ")"):
                 client.sendall(b"error: invalid input\n")
-                return False  # Server will disconnect client
+                return False
 
         ok = funcs.balanced_parentheses(seq)
         client.sendall(f"the parentheses are balanced: {'yes' if ok else 'no'}\n".encode())
@@ -176,18 +166,18 @@ def handle_command(client: socket.socket, command: str, cred_dict:dict) -> bool:
         client.sendall(f"the lcm is: {result}\n".encode())
         return True
 
-    if command.startswith("caesar"):        # NEW
+    if command.startswith("caesar"):
         if ":" not in command:
             client.sendall(b"error: invalid input\n")
             return False
-        after_colon = command.split(":", 1)[1].strip()      # Get rid of "caesar"
-        parts = after_colon.rsplit(" ", 1)                  # Split X and plaintext
+        after_colon = command.split(":", 1)[1].strip()
+        parts = after_colon.rsplit(" ", 1)
         if len(parts) != 2:
             client.sendall(b"error: invalid input\n")
             return False
         plaintext, shift_str = parts[0], parts[1]
         try:
-            shift = int(shift_str)      # Do we need to check this?
+            shift = int(shift_str)
         except ValueError:
             client.sendall(b"error: invalid input\n")
             return False
@@ -197,7 +187,9 @@ def handle_command(client: socket.socket, command: str, cred_dict:dict) -> bool:
             return False
         client.sendall(f"the ciphertext is: {result}\n".encode())
         return True
-    else:       # Unknown command
+
+    # Unknown command
+    else:
         client.sendall(b"error: invalid input\n")
         return False
 
