@@ -23,7 +23,7 @@ def handle_login(client: socket.socket, line: str, cred_dict: dict, state: dict)
             username = state.get("username")
 
             if username in cred_dict and cred_dict[username] == password:
-                msg = f"Hi {username}, good to see you\n"
+                msg = f"Hi {username}, good to see you.\n"
                 client.sendall(msg.encode("utf-8"))
                 state["stage"] = "logged_in"
             else:

@@ -195,4 +195,9 @@ def handle_command(client: socket.socket, command: str, cred_dict:dict) -> bool:
         return True
 
 
+if __name__ == "__main__":
+    main()
+
+
+
 
