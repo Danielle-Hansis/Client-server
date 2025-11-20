@@ -1,7 +1,8 @@
 import math
 import socket
 
-'''Commands Implementation'''
+''' Commands Implementation '''
+
 
 def handle_login(client: socket.socket, line: str, cred_dict: dict, state: dict) -> bool:
     line = line.strip()
@@ -36,6 +37,74 @@ def handle_login(client: socket.socket, line: str, cred_dict: dict, state: dict)
         return False
     client.sendall(b"error: invalid input\n")
     return False
+
+
+def handle_parentheses(client, command: str) -> bool:
+    if ":" in command:
+        seq = command.split(":", 1)[1].strip()
+    else:
+        seq = ""
+
+    # Check that only parentheses in client's input text
+    for ch in seq:
+        if ch not in ("(", ")"):
+            client.sendall(b"error: invalid input\n")
+            return False
+
+    ok = balanced_parentheses(seq)
+    client.sendall(f"the parentheses are balanced: {'yes' if ok else 'no'}\n".encode())
+    return True
+
+
+def handle_lcm(client, command: str) -> bool:
+    if ":" not in command:
+        client.sendall(b"error: invalid input\n")
+        return False
+
+    after_colon = command.split(":", 1)[1].strip()
+    parts = after_colon.split()
+    if len(parts) != 2:
+        client.sendall(b"error: invalid input\n")
+        return False
+
+    x_str, y_str = parts
+    try:
+        x = int(x_str)
+        y = int(y_str)
+    except ValueError:
+        client.sendall(b"error: invalid input\n")
+        return False
+
+    result = calc_lcm(x, y)
+    client.sendall(f"the lcm is: {result}\n".encode())
+    return True
+
+
+def handle_caesar(client, command: str) -> bool:
+    if ":" not in command:
+        client.sendall(b"error: invalid input\n")
+        return False
+
+    after_colon = command.split(":", 1)[1].strip()
+    parts = after_colon.rsplit(" ", 1)
+    if len(parts) != 2:
+        client.sendall(b"error: invalid input\n")
+        return False
+
+    plaintext, shift_str = parts[0], parts[1]
+    try:
+        shift = int(shift_str)
+    except ValueError:
+        client.sendall(b"error: invalid input\n")
+        return False
+
+    result = caesar_code(plaintext, shift)
+    if result is None:
+        client.sendall(b"error: invalid input\n")
+        return False
+
+    client.sendall(f"the ciphertext is: {result}\n".encode())
+    return True
 
 
 def balanced_parentheses(seq: str):
