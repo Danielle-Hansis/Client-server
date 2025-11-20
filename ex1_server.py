@@ -19,7 +19,6 @@ def main():
     server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)  # IPv4,TCP
     server_socket.bind(('', port))
     server_socket.listen(BACKLOG)
-    # NEW - Try and Finally
     try:
         server_workflow(server_socket, cred_dict)
     finally:
